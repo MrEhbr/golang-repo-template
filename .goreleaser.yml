@@ -2,8 +2,7 @@ before:
   hooks:
     - go mod download
 builds:
-  -
-    goos: [linux, darwin, windows]
+  - goos: [linux, darwin, windows]
     goarch: [386, amd64, arm, arm64]
     flags:
       - "-a"
@@ -11,6 +10,9 @@ builds:
       - '-extldflags "-static"'
     env:
       - CGO_ENABLED=0
+    main: ./cmd/golang-repo-template/main.go
+    binary: golang-repo-template
+
 archives:
   - wrap_in_directory: true
     replacements:
@@ -20,12 +22,12 @@ archives:
       386: i386
       amd64: x86_64
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "checksums.txt"
 snapshot:
   name_template: "{{ .Tag }}-next"
 changelog:
   sort: asc
   filters:
     exclude:
-    - '^docs:'
-    - '^test:'
+      - "^docs:"
+      - "^test:"

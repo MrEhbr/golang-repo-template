@@ -16,7 +16,7 @@ ifneq ($(wildcard .git/HEAD),)
 generate.authors: AUTHORS
 AUTHORS: .git/
 	echo "# This file lists all individuals having contributed content to the repository." > AUTHORS
-	echo "# For how it is generated, see 'https://github.com/MrEhbr/golang-repo-template/rules.mk'" >> AUTHORS
+	echo "# For how it is generated, see 'https://github.com/MrEhbr/vacuum-cleaner/rules.mk'" >> AUTHORS
 	echo >> AUTHORS
 	git log --format='%aN <%aE>' | LC_ALL=C.UTF-8 sort -uf >> AUTHORS
 GENERATE_STEPS += generate.authors
@@ -35,7 +35,8 @@ ifdef GOPKG
 GO ?= go
 GOPATH ?= $(HOME)/go
 GO_INSTALL_OPTS ?=
-GO_TEST_OPTS ?= -test.timeout=30s
+GO_APP ?=
+GO_TEST_OPTS ?= -test.timeout=20m -v
 GOMOD_DIR ?= .
 GOCOVERAGE_FILE ?= ./coverage.txt
 
@@ -43,8 +44,11 @@ ifdef GOBINS
 .PHONY: go.install
 go.install:
 	@set -e; for dir in $(GOBINS); do ( set -xe; \
-	  cd $$dir; \
-	  $(GO) install $(GO_INSTALL_OPTS) .; \
+	 	cd $$dir; \
+		for bin in `find $$dir/cmd -type f -name "main.go" | sed 's@/[^/]*$$@@' | sed 's/.*\///' | sort | uniq`; do ( \
+			[ -n "$(GO_APP)" ] && [ "$(GO_APP)" != $$bin ] && continue; \
+			$(GO) install $(GO_INSTALL_OPTS) ./cmd/$$bin \
+		); done \
 	); done
 INSTALL_STEPS += go.install
 
@@ -90,11 +94,28 @@ go.tidy:
 	  $(GO)	mod tidy; \
 	); done
 
+.PHONY: go.clean-cache
+go.clean-cache:
+	@set -e; for dir in `find $(GOMOD_DIR) -type f -name "go.mod" | grep -v /vendor/ | sed 's@/[^/]*$$@@' | sort | uniq`; do ( set -xe; \
+	  cd $$dir; \
+	  $(GO)	clean -cache; \
+	); done
+
+.PHONY: go.clean-testcache
+go.clean-testcache:
+	@set -e; for dir in `find $(GOMOD_DIR) -type f -name "go.mod" | grep -v /vendor/ | sed 's@/[^/]*$$@@' | sort | uniq`; do ( set -xe; \
+	  cd $$dir; \
+	  $(GO)	clean -testcache; \
+	); done
+
+
 .PHONY: go.build
 go.build:
 	@set -e; for dir in `find $(GOMOD_DIR) -type f -name "go.mod" | grep -v /vendor/ | sed 's@/[^/]*$$@@' | sort | uniq`; do ( set -xe; \
-	  cd $$dir; \
-	  $(GO)	build ./...; \
+		cd $$dir; \
+			for bin in `find $$dir/cmd -type f -name "main.go" | sed 's@/[^/]*$$@@' | sed 's/.*\///' | sort | uniq`; do ( \
+				$(GO) build -o .bin/$$bin ./cmd/$$bin/...; \
+			); done \
 	); done
 
 .PHONY: go.bump-deps
@@ -154,9 +175,10 @@ BUILD_STEPS += go.build
 BUMPDEPS_STEPS += go.bumpdeps
 TIDY_STEPS += go.tidy
 LINT_STEPS += go.lint
-ifneq ($(wildcard buf.yml),) 
+ifneq ($(wildcard buf.yml),)
 LINT_STEPS += proto.lint
 endif
+PRE_UNITTEST_STEPS += go.clean-testcache
 UNITTEST_STEPS += go.unittest
 FMT_STEPS += go.fmt
 endif

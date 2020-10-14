@@ -8,10 +8,13 @@ builds:
       - "-a"
     ldflags:
       - '-extldflags "-static"'
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser
     env:
       - CGO_ENABLED=0
     main: ./cmd/golang-repo-template/main.go
     binary: golang-repo-template
+    hooks:
+      pre: make generate
 
 archives:
   - wrap_in_directory: true

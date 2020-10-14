@@ -16,7 +16,7 @@ ifneq ($(wildcard .git/HEAD),)
 generate.authors: AUTHORS
 AUTHORS: .git/
 	echo "# This file lists all individuals having contributed content to the repository." > AUTHORS
-	echo "# For how it is generated, see 'https://github.com/MrEhbr/vacuum-cleaner/rules.mk'" >> AUTHORS
+	echo "# For how it is generated, see 'https://github.com/MrEhbr/golang-repo-template/rules.mk'" >> AUTHORS
 	echo >> AUTHORS
 	git log --format='%aN <%aE>' | LC_ALL=C.UTF-8 sort -uf >> AUTHORS
 GENERATE_STEPS += generate.authors
@@ -36,7 +36,9 @@ GO ?= go
 GOPATH ?= $(HOME)/go
 GO_INSTALL_OPTS ?=
 GO_APP ?=
-GO_TEST_OPTS ?= -test.timeout=20m -v
+GO_TEST_OPTS ?= -test.timeout=30s -v
+GO_LDFLAGS ?= "-s -w -X main.version=$(shell git describe --exact-match --tags 2> /dev/null || git symbolic-ref -q --short HEAD) -X main.commit=$(shell git rev-parse HEAD) -X main.date=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ") -X main.builtBy=$(shell whoami)"
+
 GOMOD_DIR ?= .
 GOCOVERAGE_FILE ?= ./coverage.txt
 
@@ -114,7 +116,11 @@ go.build:
 	@set -e; for dir in `find $(GOMOD_DIR) -type f -name "go.mod" | grep -v /vendor/ | sed 's@/[^/]*$$@@' | sort | uniq`; do ( set -xe; \
 		cd $$dir; \
 			for bin in `find $$dir/cmd -type f -name "main.go" | sed 's@/[^/]*$$@@' | sed 's/.*\///' | sort | uniq`; do ( \
-				$(GO) build -o .bin/$$bin ./cmd/$$bin/...; \
+				$(GO) build \
+				-gcflags=all=-trimpath=${GOPKG} \
+				-asmflags=all=-trimpath=${GOPKG} \
+				-ldflags $(GO_LDFLAGS) \
+				-o .bin/$$bin ./cmd/$$bin/...; \
 			); done \
 	); done
 

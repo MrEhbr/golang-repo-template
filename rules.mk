@@ -34,10 +34,13 @@ endif
 ifdef GOPKG
 GO ?= go
 GOPATH ?= $(HOME)/go
-GO_INSTALL_OPTS ?=
 GO_APP ?=
 GO_TEST_OPTS ?= -test.timeout=30s -v
-GO_LDFLAGS ?= "-s -w -X main.version=$(shell git describe --exact-match --tags 2> /dev/null || git symbolic-ref -q --short HEAD) -X main.commit=$(shell git rev-parse HEAD) -X main.date=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ") -X main.builtBy=$(shell whoami)"
+VERSION ?= $(shell git describe --exact-match --tags 2> /dev/null || git symbolic-ref -q --short HEAD)
+VCS_REF ?= $(shell git rev-parse HEAD)
+BUILD_DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+GO_LDFLAGS ?= "-s -w -X main.version=$(VERSION) -X main.commit=$(VCS_REF) -X main.date=$(BUILD_DATE) -X main.builtBy=$(shell whoami)"
+GO_INSTALL_OPTS ?= -ldflags $(GO_LDFLAGS)
 
 GOMOD_DIR ?= .
 GOCOVERAGE_FILE ?= ./coverage.txt
@@ -120,7 +123,7 @@ go.build:
 				-gcflags=all=-trimpath=${GOPKG} \
 				-asmflags=all=-trimpath=${GOPKG} \
 				-ldflags $(GO_LDFLAGS) \
-				-o .bin/$$bin ./cmd/$$bin/...; \
+				-o .bin/$$bin ./cmd/$$bin/main.go; \
 			); done \
 	); done
 
@@ -206,9 +209,9 @@ ifneq ($(DOCKER_IMAGE),none)
 .PHONY: docker.build
 docker.build:
 	docker build \
-	  --build-arg VCS_REF=`git rev-parse --short HEAD` \
-	  --build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
-	  --build-arg VERSION=`git describe --tags --always` \
+	  --build-arg VCS_REF=$(VCS_REF) \
+	  --build-arg BUILD_DATE=$(BUILD_DATE) \
+	  --build-arg VERSION=$(VERSION) \
 	  -t $(DOCKER_IMAGE) -f $(DOCKERFILE_PATH) $(dir $(DOCKERFILE_PATH))
 
 BUILD_STEPS += docker.build

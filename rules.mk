@@ -177,7 +177,9 @@ proto.generate: $(BUF)
 		"--plugin_name=go" \
 		"--plugin_out=$(PROTOC_GEN_GO_OUT)" \
 		"--plugin_opt=$(PROTOC_GEN_GO_OPT)"
+ifneq ($(wildcard buf.yml),)
 GENERATE_STEPS += proto.generate
+endif
 
 
 BUILD_STEPS += go.build

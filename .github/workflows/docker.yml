@@ -6,8 +6,8 @@ on:
     branches:
       - master
 jobs:
-  multi:
-    name: "Multi"
+  docker:
+    name: "Docker"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -30,6 +30,7 @@ jobs:
           fi
           echo ::set-output name=version::${VERSION}
           echo ::set-output name=tags::${TAGS}
+          echo ::set-output name=commit::${GITHUB_SHA::8}
           echo ::set-output name=created::$(date -u +'%Y-%m-%dT%H:%M:%SZ')
 
       - name: Set up Docker Buildx
@@ -50,7 +51,7 @@ jobs:
           tags: ${{ steps.prep.outputs.tags }}
           push: ${{ github.event_name != 'pull_request' }}
           build-args: |
-            VCS_REF=${{ steps.prep.outputs.version }}
+            VCS_REF=${{ steps.prep.outputs.commit }}
             BUILD_DATE=${{ steps.prep.outputs.created }}
             VERSION=${{ steps.prep.outputs.version }}
           labels: |
